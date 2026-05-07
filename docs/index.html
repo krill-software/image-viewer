@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Image Viewer — a calm image viewer for Linux</title>
+    <meta
+      name="description"
+      content="A minimal image viewer for Linux. Open one image, browse the folder, zoom, pan, fullscreen."
+    />
+    <meta property="og:title" content="Image Viewer — a calm image viewer for Linux" />
+    <meta
+      property="og:description"
+      content="Open one image, browse the folder, zoom, pan, fullscreen. A minimal image viewer for Linux. Free and open source."
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fafaff;
+        --ink: #30343f;
+        --muted: #878472;
+        --accent: #dd7596;
+        --accent-strong: #ff82bf;
+        --rule: rgba(48, 52, 63, 0.08);
+        --rule-strong: rgba(48, 52, 63, 0.18);
+        --panel: #f2f2f7;
+        --panel-2: #e8e8ee;
+        --mono: "JetBrains Mono", "Source Code Pro", ui-monospace, monospace;
+        --sans: "Inter", system-ui, sans-serif;
+        --serif: "Source Serif 4", Charter, Georgia, serif;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 17px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 120ms ease, color 120ms ease;
+      }
+      a:hover { color: var(--accent-strong); border-bottom-color: currentColor; }
+
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+
+      /* Nav */
+      nav.top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 28px 0;
+        font-family: var(--mono);
+        font-size: 14px;
+      }
+      nav.top .brand {
+        color: var(--ink);
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      nav.top .brand::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        margin-right: 10px;
+        transform: translateY(-1px);
+      }
+      nav.top ul {
+        list-style: none;
+        display: flex;
+        gap: 28px;
+        margin: 0;
+        padding: 0;
+      }
+      nav.top a { color: var(--muted); border: none; }
+      nav.top a:hover { color: var(--ink); }
+
+      /* Hero */
+      .hero { padding: 80px 0 56px; }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 28px;
+      }
+      h1 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(44px, 7vw, 76px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 0 0 24px;
+        max-width: 18ch;
+      }
+      h1 em { font-style: italic; color: var(--accent); }
+      .lede {
+        font-family: var(--serif);
+        font-size: clamp(19px, 2vw, 22px);
+        line-height: 1.55;
+        color: var(--ink);
+        max-width: 56ch;
+        margin: 0 0 40px;
+        opacity: 0.82;
+      }
+
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 22px;
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        transition: transform 120ms ease, background 120ms ease,
+          border-color 120ms ease, color 120ms ease;
+      }
+      .btn-primary { background: var(--ink); color: var(--bg); }
+      .btn-primary:hover {
+        background: var(--accent);
+        color: var(--bg);
+        transform: translateY(-1px);
+      }
+      .btn-secondary { color: var(--ink); border-color: var(--rule-strong); }
+      .btn-secondary:hover { border-color: var(--ink); color: var(--ink); }
+      .btn .size { color: var(--muted); font-weight: 400; }
+      .btn-primary .size { color: rgba(250, 250, 255, 0.55); }
+
+      .meta {
+        margin-top: 22px;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .meta strong { color: var(--ink); font-weight: 500; }
+
+      /* Preview mock */
+      .preview-frame {
+        margin: 48px 0 0;
+        border: 1px solid var(--rule-strong);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--bg);
+        box-shadow: 0 30px 60px -30px rgba(48, 52, 63, 0.18),
+          0 8px 20px -10px rgba(48, 52, 63, 0.08);
+      }
+      .titlebar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--rule);
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .titlebar .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--rule-strong);
+      }
+      .titlebar .dot.red    { background: #e8a5a5; }
+      .titlebar .dot.amber  { background: #e8cfa5; }
+      .titlebar .dot.green  { background: #a5d4b2; }
+      .titlebar .menu {
+        display: flex;
+        gap: 14px;
+        margin-left: 12px;
+        color: var(--muted);
+      }
+      .titlebar .menu .active { color: var(--ink); }
+      .titlebar .title {
+        margin-left: auto;
+        color: var(--ink);
+      }
+      .titlebar .dirty { color: var(--accent); margin-left: 4px; }
+
+      .editor-pane {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        min-height: 360px;
+      }
+      .editor-pane.viewer-pane { grid-template-columns: 1fr; }
+      .editor-pane.viewer-pane .photo::after { display: none; }
+
+      .canvas-area {
+        position: relative;
+        background:
+          linear-gradient(45deg, #e8e8ee 25%, transparent 25%) 0 0 / 14px 14px,
+          linear-gradient(-45deg, #e8e8ee 25%, transparent 25%) 0 7px / 14px 14px,
+          linear-gradient(45deg, transparent 75%, #e8e8ee 75%) 7px -7px / 14px 14px,
+          linear-gradient(-45deg, transparent 75%, #e8e8ee 75%) 7px 0 / 14px 14px,
+          var(--bg);
+        display: grid;
+        place-items: center;
+        padding: 28px;
+      }
+
+      .photo {
+        width: 78%;
+        max-width: 380px;
+        aspect-ratio: 4 / 3;
+        border-radius: 4px;
+        background:
+          radial-gradient(circle at 25% 30%, #ffd6a8 0%, transparent 35%),
+          radial-gradient(circle at 75% 65%, #f5a8c4 0%, transparent 45%),
+          linear-gradient(135deg, #4a5a8b 0%, #2a3349 60%, #1f2533 100%);
+        box-shadow: 0 12px 28px rgba(48, 52, 63, 0.22);
+        position: relative;
+      }
+      /* Crop rectangle on the mock image */
+      .photo::after {
+        content: "";
+        position: absolute;
+        inset: 12% 18% 22% 14%;
+        border: 1px solid var(--accent);
+        box-shadow: 0 0 0 1px rgba(250, 250, 255, 0.6) inset,
+          0 0 0 9999px rgba(48, 52, 63, 0.45);
+        clip-path: polygon(
+          -1000% -1000%, 1000% -1000%, 1000% 1000%, -1000% 1000%
+        );
+        pointer-events: none;
+      }
+
+      .rail {
+        background: var(--panel);
+        border-left: 1px solid var(--rule);
+        padding: 18px;
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+      .rail-h {
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 8px;
+      }
+      .rail-section { margin-bottom: 18px; }
+      .rail-row { display: flex; gap: 6px; margin-bottom: 6px; }
+      .rail-btn {
+        flex: 1;
+        text-align: center;
+        background: var(--bg);
+        border: 1px solid var(--rule-strong);
+        border-radius: 5px;
+        padding: 6px 6px;
+        color: var(--ink);
+      }
+      .rail-btn.primary {
+        background: var(--accent);
+        color: var(--bg);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .slider-mock {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10.5px;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .slider-mock + .track {
+        height: 3px;
+        background: var(--panel-2);
+        border-radius: 2px;
+        position: relative;
+        margin-bottom: 12px;
+      }
+      .slider-mock + .track::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -4px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .slider-mock + .track.mid::after { left: calc(50% - 5px); }
+      .slider-mock + .track.lo::after  { left: 18%; }
+
+      .statusbar {
+        border-top: 1px solid var(--rule);
+        padding: 8px 16px;
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--panel);
+      }
+
+      /* Section heads */
+      section {
+        padding: 96px 0;
+        border-top: 1px solid var(--rule);
+      }
+      .section-label {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 16px;
+      }
+      h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(32px, 4vw, 44px);
+        line-height: 1.15;
+        letter-spacing: -0.015em;
+        margin: 0 0 48px;
+        max-width: 22ch;
+      }
+
+      /* Features */
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 56px 64px;
+      }
+      .feature h3 {
+        font-family: var(--sans);
+        font-size: 17px;
+        font-weight: 600;
+        margin: 0 0 10px;
+        letter-spacing: -0.005em;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .feature .tag {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+
+      /* Principles */
+      .principles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 56px;
+      }
+      .principle {
+        border-left: 2px solid var(--accent);
+        padding-left: 20px;
+      }
+      .principle strong { display: block; margin-bottom: 6px; font-weight: 600; }
+      .principle span { color: var(--muted); font-size: 16px; }
+
+      /* Install */
+      .install {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 56px;
+      }
+      .install-copy p { color: var(--muted); max-width: 44ch; }
+      .install-box {
+        background: rgba(48, 52, 63, 0.03);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: 24px;
+      }
+      .install-box h3 {
+        font-family: var(--mono);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 14px;
+        font-weight: 500;
+      }
+      .install-box pre {
+        margin: 0 0 22px;
+        font-family: var(--mono);
+        font-size: 13.5px;
+        line-height: 1.7;
+        color: var(--ink);
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .install-box pre .c { color: var(--muted); }
+      .install-box hr {
+        border: none;
+        border-top: 1px solid var(--rule);
+        margin: 22px 0;
+      }
+
+      .keybinds {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 32px;
+        font-family: var(--mono);
+        font-size: 13.5px;
+      }
+      .keybinds div {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px dashed var(--rule);
+      }
+      .keybinds div span:last-child { color: var(--muted); }
+
+      kbd {
+        font-family: var(--mono);
+        font-size: 12px;
+        background: var(--bg);
+        border: 1px solid var(--rule-strong);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        padding: 1px 6px;
+        color: var(--ink);
+      }
+
+      /* Footer */
+      footer {
+        padding: 48px 0 64px;
+        border-top: 1px solid var(--rule);
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      footer a { color: var(--muted); border: none; }
+      footer a:hover { color: var(--ink); }
+
+      @media (max-width: 720px) {
+        .wrap { padding: 0 22px; }
+        nav.top ul { gap: 18px; }
+        .hero { padding: 48px 0 32px; }
+        section { padding: 72px 0; }
+        .features, .principles, .install {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .editor-pane { grid-template-columns: 1fr; }
+        .rail { display: none; }
+        .keybinds { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="top">
+        <div class="brand">fippli / image-viewer</div>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="https://github.com/fippli/image-viewer">GitHub</a></li>
+        </ul>
+      </nav>
+
+      <header class="hero">
+        <div class="eyebrow">An image viewer for Linux</div>
+        <h1>Open. Browse. <em>Look</em>.</h1>
+        <p class="lede">
+          A minimal image viewer. One window, one image, arrow keys for the rest of the folder.
+        </p>
+        <div class="cta">
+          <a
+            class="btn btn-primary"
+            href="https://github.com/fippli/image-viewer/releases/download/v0.1.0/Image%20Viewer_0.1.0_amd64.deb"
+          >
+            Download .deb
+          </a>
+          <a
+            class="btn btn-secondary"
+            href="https://github.com/fippli/image-viewer/releases/download/v0.1.0/Image%20Viewer_0.1.0_amd64.AppImage"
+          >
+            AppImage for any Linux
+          </a>
+        </div>
+        <div class="meta">
+          <strong>v0.1.0</strong> · Linux x86_64 · Free &amp; open source
+        </div>
+
+        <div class="preview-frame">
+          <div class="titlebar">
+            <span class="dot red"></span>
+            <span class="dot amber"></span>
+            <span class="dot green"></span>
+            <span class="menu">
+              <span class="active">File</span>
+              <span>View</span>
+            </span>
+            <span class="title">sunset.jpg</span>
+          </div>
+          <div class="editor-pane viewer-pane">
+            <div class="canvas-area">
+              <div class="photo"></div>
+            </div>
+          </div>
+          <div class="statusbar">
+            <span>3024 × 2268</span>
+            <span>67% · 7 / 142</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="features">
+        <div class="section-label">Features</div>
+        <h2>Just enough viewer.</h2>
+        <div class="features">
+          <div class="feature">
+            <div class="tag">← / →</div>
+            <h3>Browse the folder, not a library</h3>
+            <p>Open one image; arrow keys step through siblings in the same directory. No vault, no thumbnails strip, no library sidebar.</p>
+          </div>
+          <div class="feature">
+            <div class="tag">Fit · 100% · Free</div>
+            <h3>Three zoom modes</h3>
+            <p>Fits to window by default. <kbd>Ctrl 1</kbd> for actual size, <kbd>Ctrl scroll</kbd> to zoom anywhere on the cursor.</p>
+          </div>
+          <div class="feature">
+            <div class="tag">Click-drag</div>
+            <h3>Pan when zoomed</h3>
+            <p>Grab and drag the image when it's larger than the window. Subtle scrollbars too.</p>
+          </div>
+          <div class="feature">
+            <div class="tag">F</div>
+            <h3>Fullscreen</h3>
+            <p>One key removes the titlebar and status line. Just the image. <kbd>Esc</kbd> to return.</p>
+          </div>
+          <div class="feature">
+            <div class="tag">PNG · JPEG · WebP · GIF · AVIF · SVG · BMP · ICO</div>
+            <h3>Whatever the webview renders</h3>
+            <p>No heavyweight decoder bindings. Animated GIFs, WebP, and AVIF play on loop automatically.</p>
+          </div>
+          <div class="feature">
+            <div class="tag">Tauri · Rust</div>
+            <h3>Native Linux</h3>
+            <p>Small binary. Real file associations. Set as the default for image files via the .deb.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="principles">
+        <div class="section-label">Principles</div>
+        <h2>One window, one image.</h2>
+        <div class="principles">
+          <div class="principle">
+            <strong>No editing.</strong>
+            <span>Not even rotate-and-save. That's a different app.</span>
+          </div>
+          <div class="principle">
+            <strong>No chrome on the working surface.</strong>
+            <span>Filename in the titlebar, dimensions in the status line, image fills the rest.</span>
+          </div>
+          <div class="principle">
+            <strong>Fit is always the default.</strong>
+            <span>Every new image starts at fit-to-window. Zoom is a deliberate gesture.</span>
+          </div>
+          <div class="principle">
+            <strong>Keyboard-first, mouse-honest.</strong>
+            <span>Arrow keys browse, <kbd>Ctrl scroll</kbd> zooms, click-drag pans.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="section-label">Install</div>
+        <h2>Two files. One minute.</h2>
+        <div class="install">
+          <div class="install-copy">
+            <p>
+              The <span style="font-family: var(--mono); color: var(--ink)">.deb</span>
+              registers the app as a candidate handler for image files —
+              right-click any image, "Open with…", set as default.
+            </p>
+            <p style="margin-top: 20px">
+              Or build from source:
+              <span style="font-family: var(--mono); color: var(--ink)">pnpm install &amp;&amp; pnpm tauri build</span>.
+            </p>
+          </div>
+          <div class="install-box">
+            <h3>Debian / Ubuntu</h3>
+<pre>sudo dpkg -i Image\ Viewer_0.1.0_amd64.deb</pre>
+
+            <hr />
+
+            <h3>AppImage · any Linux</h3>
+<pre><span class="c"># download</span>
+curl -LO https://github.com/fippli/image-viewer/releases/download/v0.1.0/Image%20Viewer_0.1.0_amd64.AppImage
+
+<span class="c"># run</span>
+chmod +x Image\ Viewer_0.1.0_amd64.AppImage
+./Image\ Viewer_0.1.0_amd64.AppImage path/to/photo.jpg</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="keys">
+        <div class="section-label">Keybindings</div>
+        <h2>All of it, from the keyboard.</h2>
+        <div class="keybinds">
+          <div><span>Open</span><kbd>Ctrl O</kbd></div>
+          <div><span>Previous / next image</span><kbd>← / →</kbd></div>
+          <div><span>First / last image</span><kbd>Home / End</kbd></div>
+          <div><span>Fit to window</span><kbd>Ctrl 0</kbd></div>
+          <div><span>Original size (100%)</span><kbd>Ctrl 1</kbd></div>
+          <div><span>Zoom in / out</span><kbd>Ctrl = / -</kbd></div>
+          <div><span>Wheel zoom</span><kbd>Ctrl scroll</kbd></div>
+          <div><span>Pan</span><kbd>click drag</kbd></div>
+          <div><span>Fullscreen</span><kbd>F or F11</kbd></div>
+          <div><span>Exit fullscreen</span><kbd>Esc</kbd></div>
+          <div><span>Close window</span><kbd>Ctrl W</kbd></div>
+          <div><span>Quit</span><kbd>Ctrl Q</kbd></div>
+        </div>
+      </section>
+
+      <footer>
+        <div>© fippli · MIT licensed · No tracking, no accounts</div>
+        <div>
+          <a href="https://github.com/fippli/image-viewer">Source on GitHub</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/fippli/image-viewer/issues">Report an issue</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

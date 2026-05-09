@@ -1,13 +1,5 @@
-/* image-viewer — app-specific styles. Palette + chrome + menu + status
- * line + kbd come from @krill-software/desktop-ui (imported in main.ts). */
-
-#titlebar    { grid-area: title;  }
-#viewport    { grid-area: main;   }
-#status-line { grid-area: status; }
-
-body {
-  grid-template-rows: auto 1fr auto;
-}
+/* image-viewer — app-specific styles. Palette + chrome + body grid
+ * + menu + status line + kbd come from @krill-software/desktop-ui. */
 
 /* Viewport ============================================================== */
 

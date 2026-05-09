@@ -162,6 +162,15 @@ function basename(path: string): string {
   return i >= 0 ? path.slice(i + 1) : path;
 }
 
+function imageTypeLabel(path: string): string {
+  const ext = (path.split(".").pop() ?? "").toLowerCase();
+  const map: Record<string, string> = {
+    jpg: "JPEG", jpeg: "JPEG", png: "PNG", webp: "WebP",
+    gif: "GIF", avif: "AVIF", svg: "SVG", bmp: "BMP", ico: "ICO",
+  };
+  return map[ext] ?? ext.toUpperCase();
+}
+
 async function loadImage(path: string): Promise<string | null> {
   let res: ImageRead;
   try {
@@ -204,7 +213,7 @@ async function loadImage(path: string): Promise<string | null> {
   setDisplay("image");
   const name = basename(res.path);
   titleEl.textContent = name;
-  dimensionsEl.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+  dimensionsEl.textContent = `${imageTypeLabel(res.path)} · ${img.naturalWidth} × ${img.naturalHeight}`;
   setMode("fit");
   const title = `${name} — Image Viewer`;
   document.title = title;
@@ -338,22 +347,20 @@ function initChrome() {
   viewportEl.appendChild(errorState);
   errorName = errorState.querySelector("#error-name") as HTMLElement;
 
-  // Status line: dimensions, zoom, and right-aligned position counter.
-  const sl = chrome.statusLine!;
+  // Status line halves:
+  //   LEFT  (file identity) — "JPEG · 1456×5678"
+  //   RIGHT (state)         — "100% · 7 / 142"
   dimensionsEl = document.createElement("span");
-  dimensionsEl.id = "status-dimensions";
   dimensionsEl.classList.add("mono");
-  sl.appendChild(dimensionsEl);
+  chrome.statusInfo!.appendChild(dimensionsEl);
 
   zoomLabelEl = document.createElement("span");
-  zoomLabelEl.id = "status-zoom";
   zoomLabelEl.classList.add("mono");
-  sl.appendChild(zoomLabelEl);
+  chrome.statusState!.appendChild(zoomLabelEl);
 
   positionEl = document.createElement("span");
-  positionEl.id = "status-position";
-  positionEl.classList.add("right", "mono");
-  sl.appendChild(positionEl);
+  positionEl.classList.add("mono");
+  chrome.statusState!.appendChild(positionEl);
 
   installViewportInteractions();
   document.body.dataset.state = "empty";

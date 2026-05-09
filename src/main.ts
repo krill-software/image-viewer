@@ -1,5 +1,5 @@
 import "@krill-software/desktop-ui/styles";
-import { mountChrome, type MenuDef } from "@krill-software/desktop-ui";
+import { mountChrome } from "@krill-software/desktop-ui";
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -260,31 +260,7 @@ async function openViaDialog(): Promise<void> {
   if (typeof selected === "string") await openPath(selected);
 }
 
-function buildMenus(): MenuDef[] {
-  return [
-    {
-      label: "File",
-      items: [
-        { label: "Open…", shortcut: "Ctrl+O", action: () => void openViaDialog() },
-        { sep: true },
-        { label: "Close window", shortcut: "Ctrl+W", action: () => void getCurrentWindow().close() },
-        { label: "Quit",         shortcut: "Ctrl+Q", action: () => void getCurrentWindow().close() },
-      ],
-    },
-    {
-      label: "View",
-      items: [
-        { label: "Fit to window", shortcut: "Ctrl+0", action: () => setMode("fit") },
-        { label: "Original size", shortcut: "Ctrl+1", action: () => setMode("free", 1) },
-        { sep: true },
-        { label: "Zoom in",       shortcut: "Ctrl+=", action: () => zoomBy(1.25) },
-        { label: "Zoom out",      shortcut: "Ctrl+-", action: () => zoomBy(0.8) },
-        { sep: true },
-        { label: "Fullscreen",    shortcut: "F",      action: () => void toggleFullscreen() },
-      ],
-    },
-  ];
-}
+// Canonical actions are passed inline to mountChrome via the `actions` map.
 
 async function toggleFullscreen(): Promise<void> {
   const w = getCurrentWindow();
@@ -297,34 +273,15 @@ async function toggleFullscreen(): Promise<void> {
   });
 }
 
-function installKeybindings() {
+// Esc out of fullscreen — the only app-specific keybinding the package
+// can't cover via the action registry.
+function installFullscreenEscape() {
   window.addEventListener("keydown", (e) => {
-    if (isTextTarget(e.target)) return;
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key.toLowerCase() === "o") { e.preventDefault(); void openViaDialog(); }
-    else if (mod && (e.key.toLowerCase() === "q" || e.key.toLowerCase() === "w")) {
-      e.preventDefault(); void getCurrentWindow().close();
+    if (e.key === "Escape" && document.body.dataset.fullscreen === "true") {
+      e.preventDefault();
+      void toggleFullscreen();
     }
-    else if (mod && e.key === "0") { e.preventDefault(); setMode("fit"); }
-    else if (mod && e.key === "1") { e.preventDefault(); setMode("free", 1); }
-    else if (mod && (e.key === "=" || e.key === "+")) { e.preventDefault(); zoomBy(1.25); }
-    else if (mod && e.key === "-") { e.preventDefault(); zoomBy(0.8); }
-    else if (!mod && (e.key === "f" || e.key === "F" || e.key === "F11")) {
-      e.preventDefault(); void toggleFullscreen();
-    }
-    else if (!mod && e.key === "Escape" && document.body.dataset.fullscreen === "true") {
-      e.preventDefault(); void toggleFullscreen();
-    }
-    else if (!mod && e.key === "ArrowLeft")  { e.preventDefault(); void goTo(view.index - 1); }
-    else if (!mod && e.key === "ArrowRight") { e.preventDefault(); void goTo(view.index + 1); }
-    else if (!mod && e.key === "Home")       { e.preventDefault(); void goTo(0); }
-    else if (!mod && e.key === "End")        { e.preventDefault(); void goTo(view.paths.length - 1); }
   }, { capture: true });
-}
-
-function isTextTarget(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false;
-  return t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable;
 }
 
 async function installFileDrop() {
@@ -340,7 +297,18 @@ async function installFileDrop() {
 function initChrome() {
   const chrome = mountChrome({
     productName: "Image Viewer",
-    menus: buildMenus(),
+    actions: {
+      "open":        openViaDialog,
+      "fullscreen":  toggleFullscreen,
+      "zoom-in":     () => zoomBy(1.25),
+      "zoom-out":    () => zoomBy(0.8),
+      "zoom-fit":    () => setMode("fit"),
+      "zoom-actual": () => setMode("free", 1),
+      "previous":    () => goTo(view.index - 1),
+      "next":        () => goTo(view.index + 1),
+      "first":       () => goTo(0),
+      "last":        () => goTo(view.paths.length - 1),
+    },
     showStatusLine: true,
   });
   titleEl = chrome.title;
@@ -394,7 +362,7 @@ function initChrome() {
 
 async function boot() {
   initChrome();
-  installKeybindings();
+  installFullscreenEscape();
   await installFileDrop();
 
   let opened = false;

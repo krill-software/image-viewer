@@ -42,7 +42,7 @@ Verify with `sha256sum -c SHA256SUMS`.
 ## Run from CLI
 
 ```sh
-fippli-image-viewer path/to/photo.jpg
+krill-image-viewer path/to/photo.jpg
 ```
 
 Without an arg, the app starts empty — drag-drop or `Ctrl+O` to load.

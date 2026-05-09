@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a release of fippli-image-viewer and gather artifacts under release/v<version>/.
+# Build a release of krill-image-viewer and gather artifacts under release/v<version>/.
 #
 # What this does:
 #   1. Reads the version from package.json.
@@ -32,7 +32,7 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
-echo "==> Releasing fippli-image-viewer v$VERSION"
+echo "==> Releasing krill-image-viewer v$VERSION"
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
   echo "==> Installing dependencies"

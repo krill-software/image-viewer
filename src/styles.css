@@ -1,122 +1,19 @@
-:root {
-  --fm-bg: #FAFAFF;
-  --fm-text: #30343F;
-  --fm-muted: #878472;
-  --fm-accent: #DD7596;
-  --fm-accent-strong: #FF82BF;
-  --fm-rule: rgba(48, 52, 63, 0.08);
-  --fm-rule-strong: rgba(48, 52, 63, 0.16);
-  --fm-panel: #F2F2F7;
-  --fm-panel-2: #E8E8EE;
-}
+/* image-viewer — app-specific styles. Palette + chrome + menu + status
+ * line + kbd come from @krill-software/desktop-ui (imported in main.ts). */
 
-* { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  height: 100%;
-  background: var(--fm-bg);
-  color: var(--fm-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 13px;
-  user-select: none;
-  overflow: hidden;
-}
+#titlebar    { grid-area: title;  }
+#viewport    { grid-area: main;   }
+#status-line { grid-area: status; }
 
 body {
-  display: grid;
   grid-template-rows: auto 1fr auto;
 }
-
-button { font-family: inherit; }
-kbd {
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 11px;
-  background: var(--fm-bg);
-  border: 1px solid var(--fm-rule-strong);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 1px 6px;
-  color: var(--fm-text);
-}
-
-/* Titlebar ============================================================== */
-
-#titlebar {
-  display: flex;
-  align-items: stretch;
-  height: 32px;
-  background: var(--fm-panel);
-  border-bottom: 1px solid var(--fm-rule);
-}
-
-#menu-bar { display: flex; align-items: stretch; padding: 0 4px; }
-
-.menu-trigger {
-  background: transparent;
-  border: 0;
-  color: var(--fm-text);
-  padding: 0 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.menu-trigger:hover, .menu-trigger[data-open="true"] { background: var(--fm-panel-2); }
-
-.menu-dropdown {
-  position: fixed;
-  z-index: 100;
-  background: var(--fm-bg);
-  border: 1px solid var(--fm-rule-strong);
-  box-shadow: 0 8px 24px rgba(48, 52, 63, 0.12);
-  border-radius: 6px;
-  padding: 4px;
-  min-width: 220px;
-}
-.menu-item {
-  display: flex; justify-content: space-between; align-items: center; gap: 24px;
-  width: 100%; text-align: left;
-  background: transparent; border: 0; color: var(--fm-text);
-  padding: 6px 10px; font-size: 12px; border-radius: 4px;
-  cursor: pointer;
-}
-.menu-item:hover { background: var(--fm-panel); }
-.menu-item-shortcut { color: var(--fm-muted); font-size: 11px; }
-.menu-separator { height: 1px; background: var(--fm-rule); margin: 4px 0; }
-
-#titlebar-drag {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-}
-#titlebar-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 12px;
-  color: var(--fm-text);
-  pointer-events: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: calc(100% - 24px);
-}
-
-#titlebar-controls { display: flex; }
-#titlebar-controls button {
-  width: 36px;
-  background: transparent; border: 0;
-  color: var(--fm-muted);
-  cursor: pointer;
-}
-#titlebar-controls button:hover { color: var(--fm-text); background: var(--fm-panel-2); }
-#titlebar-close:hover { background: var(--fm-accent); color: var(--fm-bg); }
 
 /* Viewport ============================================================== */
 
 #viewport {
   position: relative;
-  background: var(--fm-panel-2);
+  background: var(--fm-bg);
   overflow: auto;
   min-height: 0;
 
@@ -136,10 +33,6 @@ kbd {
 
 #viewport.pannable { cursor: grab; }
 #viewport.panning  { cursor: grabbing; }
-
-/* Fullscreen — hide chrome, image only on the viewport background. */
-body[data-fullscreen="true"] #titlebar,
-body[data-fullscreen="true"] #status-line { display: none; }
 
 #image {
   display: block;
@@ -168,22 +61,3 @@ body:not([data-state="error"]) #error-state { display: none; }
   font-size: 12px;
   color: var(--fm-muted);
 }
-
-/* Status line ========================================================== */
-
-#status-line {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 4px 12px;
-  background: var(--fm-panel);
-  border-top: 1px solid var(--fm-rule);
-  color: var(--fm-muted);
-  font-size: 11px;
-  height: 24px;
-}
-#status-dimensions, #status-zoom, #status-position {
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  flex-shrink: 0;
-}
-#status-position { margin-left: auto; }

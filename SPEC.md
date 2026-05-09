@@ -7,15 +7,15 @@ A minimal, single-window Linux image viewer. Open one image, see it. Step throug
 | Where        | Value                                  |
 |--------------|----------------------------------------|
 | Slug         | `image-viewer`                         |
-| Binary       | `fippli-image-viewer`                  |
-| Cargo lib    | `fippli_image_viewer_lib`              |
+| Binary       | `krill-image-viewer`                  |
+| Cargo lib    | `krill_image_viewer_lib`              |
 | productName  | `Image Viewer`                         |
-| Identifier   | `com.fippli.image-viewer`              |
-| Directory    | `linux-apps/image-viewer/`             |
-| Repo         | `fippli/image-viewer`                  |
-| State dir    | `$XDG_STATE_HOME/fippli-image-viewer/` |
+| Identifier   | `software.krill.image-viewer`              |
+| Directory    | `krill-software/image-viewer/`             |
+| Repo         | `krill-software/image-viewer`                  |
+| State dir    | `$XDG_STATE_HOME/krill-image-viewer/` |
 
-Convention lives in [STYLE.md](../STYLE.md) → Naming.
+Convention lives in [STYLE.md](https://github.com/krill-software/.github/blob/main/STYLE.md) → Naming.
 
 ## Goals
 
@@ -26,7 +26,7 @@ Convention lives in [STYLE.md](../STYLE.md) → Naming.
 
 ## Non-goals (v1)
 
-- No editing. Not even rotate-and-save. (Use `fippli-image` for that.)
+- No editing. Not even rotate-and-save. (Use `krill-image` for that.)
 - No thumbnails strip, no folder grid, no library, no tags, no ratings.
 - No EXIF panel, no metadata inspector, no histogram.
 - No slideshow timer, no transitions.
@@ -38,12 +38,13 @@ Convention lives in [STYLE.md](../STYLE.md) → Naming.
 
 ## Stack
 
-- **Shell:** Tauri 2 (Rust backend + system webview). Mirrors image-editor.
+- **Shell:** Tauri 2 (Rust backend + system webview).
 - **Frontend:** TypeScript + Vite.
+- **Chrome + palette:** [`@krill-software/desktop-ui`](https://github.com/krill-software/desktop-ui) (git dep). Provides the locked-palette CSS bundle, custom titlebar, menu bar, and status line via `mountChrome()`.
 - **Rendering:** plain `<img>` element inside a zoom/pan container. Webview decodes everything; we don't touch pixels.
 - **Folder enumeration:** Rust — given the opened path, `read_dir` the parent, filter by extension, sort case-insensitive lexicographically. Returns the list and the index of the current file.
 
-Rationale: the webview is already a world-class image renderer. The only thing Rust does is file I/O and folder listing. This is the smallest fippli app by far, and it should stay that way.
+Rationale: the webview is already a world-class image renderer. The only thing Rust does is file I/O and folder listing. This is the smallest krill app by far, and it should stay that way.
 
 ## Architecture
 
@@ -66,7 +67,7 @@ Rationale: the webview is already a world-class image renderer. The only thing R
 ## Features (v1)
 
 ### File I/O
-- **Open:** drag-drop onto window, CLI arg (`fippli-image-viewer photo.jpg`), `Ctrl+O` dialog.
+- **Open:** drag-drop onto window, CLI arg (`krill-image-viewer photo.jpg`), `Ctrl+O` dialog.
 - **Recent files:** last 10, persisted in XDG state, reachable via `Ctrl+R` or a small recents submenu in the titlebar menu.
 - **No save, no export.** Read-only viewer.
 
@@ -133,11 +134,11 @@ Rationale: the webview is already a world-class image renderer. The only thing R
 
 ## Linux integration
 
-- Binary name: `fippli-image-viewer` (TBC).
+- Binary name: `krill-image-viewer` (TBC).
 - `.desktop` file with MIME types: `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/avif`, `image/svg+xml`, `image/bmp`, `image/x-icon`.
 - Registered as a candidate handler, not the default — users opt in via "Open with…".
-- Config: `$XDG_CONFIG_HOME/fippli-image-viewer/config.toml` (empty in v1).
-- State: `$XDG_STATE_HOME/fippli-image-viewer/` — window geometry, recent files.
+- Config: `$XDG_CONFIG_HOME/krill-image-viewer/config.toml` (empty in v1).
+- State: `$XDG_STATE_HOME/krill-image-viewer/` — window geometry, recent files.
 - Distribution: AppImage primary; `.deb` secondary.
 
 ## Out of scope / open questions

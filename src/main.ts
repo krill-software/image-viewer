@@ -1,10 +1,11 @@
+import "@krill-software/desktop-ui/styles";
+import { mountChrome, type MenuDef } from "@krill-software/desktop-ui";
+
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getMatches } from "@tauri-apps/plugin-cli";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-
-import { installMenuBar, type MenuDef } from "./menu";
 
 interface ImageRead {
   path: string;
@@ -25,15 +26,15 @@ interface ViewState {
 const view: ViewState = { paths: [], index: 0 };
 let currentBlobUrl: string | null = null;
 
-const img = document.getElementById("image") as HTMLImageElement;
-const viewportEl = document.getElementById("viewport")!;
-const titleEl = document.getElementById("titlebar-title")!;
-const dimensionsEl = document.getElementById("status-dimensions")!;
-const zoomLabelEl = document.getElementById("status-zoom")!;
-const positionEl = document.getElementById("status-position")!;
-const emptyState = document.getElementById("empty-state")!;
-const errorState = document.getElementById("error-state")!;
-const errorName = document.getElementById("error-name")!;
+let img: HTMLImageElement;
+let viewportEl: HTMLElement;
+let titleEl: HTMLElement;
+let dimensionsEl: HTMLElement;
+let zoomLabelEl: HTMLElement;
+let positionEl: HTMLElement;
+let emptyState: HTMLElement;
+let errorState: HTMLElement;
+let errorName: HTMLElement;
 
 type ZoomMode = "fit" | "free";
 const zoomState = { mode: "fit" as ZoomMode, factor: 1 };
@@ -89,83 +90,78 @@ window.addEventListener("resize", () => {
   else updatePannable();
 });
 
-// ---- Click-drag pan (when overflow exists) ---------------------------------
+// ---- Click-drag pan + wheel zoom (wired in initChrome) ----------------
 
 let dragging = false;
 let dragStartX = 0, dragStartY = 0, dragStartScrollX = 0, dragStartScrollY = 0;
 
-viewportEl.addEventListener("pointerdown", (e) => {
-  if (!viewportEl.classList.contains("pannable")) return;
-  if (e.button !== 0 && e.button !== 1) return;
-  dragging = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  dragStartScrollX = viewportEl.scrollLeft;
-  dragStartScrollY = viewportEl.scrollTop;
-  viewportEl.setPointerCapture(e.pointerId);
-  viewportEl.classList.add("panning");
-  e.preventDefault();
-});
-viewportEl.addEventListener("pointermove", (e) => {
-  if (!dragging) return;
-  viewportEl.scrollLeft = dragStartScrollX - (e.clientX - dragStartX);
-  viewportEl.scrollTop = dragStartScrollY - (e.clientY - dragStartY);
-});
-const endDrag = (e: PointerEvent) => {
-  if (!dragging) return;
-  dragging = false;
-  viewportEl.releasePointerCapture(e.pointerId);
-  viewportEl.classList.remove("panning");
-};
-viewportEl.addEventListener("pointerup", endDrag);
-viewportEl.addEventListener("pointercancel", endDrag);
+function installViewportInteractions() {
+  viewportEl.addEventListener("pointerdown", (e) => {
+    if (!viewportEl.classList.contains("pannable")) return;
+    if (e.button !== 0 && e.button !== 1) return;
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartScrollX = viewportEl.scrollLeft;
+    dragStartScrollY = viewportEl.scrollTop;
+    viewportEl.setPointerCapture(e.pointerId);
+    viewportEl.classList.add("panning");
+    e.preventDefault();
+  });
+  viewportEl.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    viewportEl.scrollLeft = dragStartScrollX - (e.clientX - dragStartX);
+    viewportEl.scrollTop = dragStartScrollY - (e.clientY - dragStartY);
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    viewportEl.releasePointerCapture(e.pointerId);
+    viewportEl.classList.remove("panning");
+  };
+  viewportEl.addEventListener("pointerup", endDrag);
+  viewportEl.addEventListener("pointercancel", endDrag);
 
-// ---- Wheel-zoom centered on cursor -----------------------------------------
+  viewportEl.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    if (!img.naturalWidth) return;
+    e.preventDefault();
 
-viewportEl.addEventListener("wheel", (e) => {
-  if (!e.ctrlKey && !e.metaKey) return;
-  if (!img.naturalWidth) return;
-  e.preventDefault();
+    const rect = viewportEl.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    const oldFactor = zoomState.mode === "fit" ? fitFactor() : zoomState.factor;
+    const ix = (viewportEl.scrollLeft + cursorX) / oldFactor;
+    const iy = (viewportEl.scrollTop  + cursorY) / oldFactor;
 
-  const rect = viewportEl.getBoundingClientRect();
-  const cursorX = e.clientX - rect.left;
-  const cursorY = e.clientY - rect.top;
-  const oldFactor = zoomState.mode === "fit" ? fitFactor() : zoomState.factor;
-  // Image-space coordinates under the cursor before zoom.
-  const ix = (viewportEl.scrollLeft + cursorX) / oldFactor;
-  const iy = (viewportEl.scrollTop  + cursorY) / oldFactor;
+    const mult = Math.exp(-e.deltaY * 0.002);
+    setMode("free", oldFactor * mult);
 
-  const mult = Math.exp(-e.deltaY * 0.002);
-  setMode("free", oldFactor * mult);
-
-  // After applyZoom, scroll so (ix, iy) is at cursor position.
-  viewportEl.scrollLeft = ix * zoomState.factor - cursorX;
-  viewportEl.scrollTop  = iy * zoomState.factor - cursorY;
-}, { passive: false });
+    viewportEl.scrollLeft = ix * zoomState.factor - cursorX;
+    viewportEl.scrollTop  = iy * zoomState.factor - cursorY;
+  }, { passive: false });
+}
 
 type Display = "empty" | "image" | "error";
-function setDisplay(state: Display) {
-  document.body.dataset.state = state;
-  emptyState.hidden = state !== "empty";
-  errorState.hidden = state !== "error";
-  if (state !== "image") {
+function setDisplay(s: Display) {
+  document.body.dataset.state = s;
+  emptyState.hidden = s !== "empty";
+  errorState.hidden = s !== "error";
+  if (s !== "image") {
     img.removeAttribute("src");
     img.style.width = "";
     img.style.height = "";
-    titleEl.textContent = "";
+    titleEl.textContent = "Image Viewer";
     dimensionsEl.textContent = "";
     zoomLabelEl.textContent = "";
   }
 }
-setDisplay("empty");
 
 function basename(path: string): string {
   const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return i >= 0 ? path.slice(i + 1) : path;
 }
 
-/** Read bytes for `path` and swap the displayed image. Returns the resolved
- *  absolute path on success, or null on failure. */
 async function loadImage(path: string): Promise<string | null> {
   let res: ImageRead;
   try {
@@ -184,9 +180,6 @@ async function loadImage(path: string): Promise<string | null> {
   const oldUrl = currentBlobUrl;
   currentBlobUrl = url;
 
-  // Swap src and wait for the new image to actually decode before revoking
-  // the old blob — otherwise revoking can fire a spurious 'error' on the
-  // current src.
   const decoded = await new Promise<boolean>((resolve) => {
     const onLoad = () => { cleanup(); resolve(true); };
     const onError = () => { cleanup(); resolve(false); };
@@ -212,7 +205,6 @@ async function loadImage(path: string): Promise<string | null> {
   const name = basename(res.path);
   titleEl.textContent = name;
   dimensionsEl.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
-  // Reset to fit on every load (per SPEC).
   setMode("fit");
   const title = `${name} — Image Viewer`;
   document.title = title;
@@ -233,7 +225,6 @@ function updatePosition() {
   positionEl.textContent = `${view.index + 1} / ${view.paths.length}`;
 }
 
-/** Open a fresh path: load it and rebuild the sibling list. */
 async function openPath(path: string): Promise<void> {
   const ok = await loadImage(path);
   if (!ok) return;
@@ -249,7 +240,6 @@ async function openPath(path: string): Promise<void> {
   updatePosition();
 }
 
-/** Navigate to a sibling index, wrapping at both ends. */
 async function goTo(rawIndex: number): Promise<void> {
   if (view.paths.length === 0) return;
   const n = view.paths.length;
@@ -301,25 +291,10 @@ async function toggleFullscreen(): Promise<void> {
   const isFs = await w.isFullscreen().catch(() => false);
   await w.setFullscreen(!isFs).catch(() => {});
   document.body.dataset.fullscreen = isFs ? "false" : "true";
-  // Layout changed; refit on next frame.
   requestAnimationFrame(() => {
     if (zoomState.mode === "fit") applyZoom();
     else updatePannable();
   });
-}
-
-function installTitlebar() {
-  const w = getCurrentWindow();
-  const bind = (id: string, h: () => void | Promise<void>) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("click", (e) => { e.preventDefault(); void h(); });
-  };
-  bind("titlebar-min", () => w.minimize());
-  bind("titlebar-max", async () => (await w.isMaximized()) ? w.unmaximize() : w.maximize());
-  bind("titlebar-close", () => w.close());
-  document.getElementById("titlebar-drag")?.addEventListener("dblclick", async () =>
-    (await w.isMaximized()) ? w.unmaximize() : w.maximize(),
-  );
 }
 
 function installKeybindings() {
@@ -362,10 +337,63 @@ async function installFileDrop() {
   });
 }
 
+function initChrome() {
+  const chrome = mountChrome({
+    productName: "Image Viewer",
+    menus: buildMenus(),
+    showStatusLine: true,
+  });
+  titleEl = chrome.title;
+  viewportEl = chrome.viewport;
+
+  // Image + empty/error states inside the viewport.
+  img = document.createElement("img");
+  img.id = "image";
+  img.alt = "";
+  viewportEl.appendChild(img);
+
+  emptyState = document.createElement("div");
+  emptyState.id = "empty-state";
+  emptyState.innerHTML = `
+    <p>No image open.</p>
+    <p class="hint">Drop a file here, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.</p>
+  `;
+  viewportEl.appendChild(emptyState);
+
+  errorState = document.createElement("div");
+  errorState.id = "error-state";
+  errorState.hidden = true;
+  errorState.innerHTML = `
+    <p>Can't display this format.</p>
+    <p class="hint" id="error-name"></p>
+  `;
+  viewportEl.appendChild(errorState);
+  errorName = errorState.querySelector("#error-name") as HTMLElement;
+
+  // Status line: dimensions, zoom, and right-aligned position counter.
+  const sl = chrome.statusLine!;
+  dimensionsEl = document.createElement("span");
+  dimensionsEl.id = "status-dimensions";
+  dimensionsEl.classList.add("mono");
+  sl.appendChild(dimensionsEl);
+
+  zoomLabelEl = document.createElement("span");
+  zoomLabelEl.id = "status-zoom";
+  zoomLabelEl.classList.add("mono");
+  sl.appendChild(zoomLabelEl);
+
+  positionEl = document.createElement("span");
+  positionEl.id = "status-position";
+  positionEl.classList.add("right", "mono");
+  sl.appendChild(positionEl);
+
+  installViewportInteractions();
+  document.body.dataset.state = "empty";
+  setDisplay("empty");
+}
+
 async function boot() {
-  installTitlebar();
-  const menuContainer = document.getElementById("menu-bar");
-  if (menuContainer) installMenuBar(menuContainer, buildMenus());
+  initChrome();
   installKeybindings();
   await installFileDrop();
 

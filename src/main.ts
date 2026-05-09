@@ -1,5 +1,5 @@
 import "@krill-software/desktop-ui/styles";
-import { mountChrome } from "@krill-software/desktop-ui";
+import { mountChrome, buildEmptyState, buildErrorState, type ErrorStateRefs } from "@krill-software/desktop-ui";
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -32,9 +32,8 @@ let titleEl: HTMLElement;
 let dimensionsEl: HTMLElement;
 let zoomLabelEl: HTMLElement;
 let positionEl: HTMLElement;
-let emptyState: HTMLElement;
-let errorState: HTMLElement;
-let errorName: HTMLElement;
+let emptyEl: HTMLElement;
+let errorState: ErrorStateRefs;
 
 type ZoomMode = "fit" | "free";
 const zoomState = { mode: "fit" as ZoomMode, factor: 1 };
@@ -145,13 +144,13 @@ function installViewportInteractions() {
 type Display = "empty" | "image" | "error";
 function setDisplay(s: Display) {
   document.body.dataset.state = s;
-  emptyState.hidden = s !== "empty";
-  errorState.hidden = s !== "error";
+  emptyEl.hidden = s !== "empty";
+  errorState.element.hidden = s !== "error";
   if (s !== "image") {
     img.removeAttribute("src");
     img.style.width = "";
     img.style.height = "";
-    titleEl.textContent = "Image Viewer";
+    titleEl.textContent = "";
     dimensionsEl.textContent = "";
     zoomLabelEl.textContent = "";
   }
@@ -222,7 +221,7 @@ async function loadImage(path: string): Promise<string | null> {
 }
 
 function showError(path: string) {
-  errorName.textContent = basename(path);
+  errorState.setFilename(basename(path));
   setDisplay("error");
 }
 
@@ -329,23 +328,15 @@ function initChrome() {
   img.alt = "";
   viewportEl.appendChild(img);
 
-  emptyState = document.createElement("div");
-  emptyState.id = "empty-state";
-  emptyState.innerHTML = `
-    <p>No image open.</p>
-    <p class="hint">Drop a file here, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.</p>
-  `;
-  viewportEl.appendChild(emptyState);
+  emptyEl = buildEmptyState({
+    primary: "No image open.",
+    hint: 'Drop a file here, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.',
+  });
+  viewportEl.appendChild(emptyEl);
 
-  errorState = document.createElement("div");
-  errorState.id = "error-state";
-  errorState.hidden = true;
-  errorState.innerHTML = `
-    <p>Can't display this format.</p>
-    <p class="hint" id="error-name"></p>
-  `;
-  viewportEl.appendChild(errorState);
-  errorName = errorState.querySelector("#error-name") as HTMLElement;
+  errorState = buildErrorState({ primary: "Can't display this format." });
+  errorState.element.hidden = true;
+  viewportEl.appendChild(errorState.element);
 
   // Status line halves:
   //   LEFT  (file identity) — "JPEG · 1456×5678"

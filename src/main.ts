@@ -328,13 +328,10 @@ function initChrome() {
   img.alt = "";
   viewportEl.appendChild(img);
 
-  emptyEl = buildEmptyState({
-    primary: "No image open.",
-    hint: 'Drop a file here, or press <kbd>Ctrl</kbd>+<kbd>O</kbd>.',
-  });
+  emptyEl = buildEmptyState();
   viewportEl.appendChild(emptyEl);
 
-  errorState = buildErrorState({ primary: "Can't display this format." });
+  errorState = buildErrorState({ message: "Can't display this format." });
   errorState.element.hidden = true;
   viewportEl.appendChild(errorState.element);
 

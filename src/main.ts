@@ -1,5 +1,5 @@
 import "@krill-software/desktop-ui/styles";
-import { mountChrome, buildEmptyState, buildErrorState, type ErrorStateRefs } from "@krill-software/desktop-ui";
+import { mountChrome, buildEmptyState, buildErrorState, showBootError, type ErrorStateRefs } from "@krill-software/desktop-ui";
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -378,4 +378,7 @@ async function boot() {
   }
 }
 
-boot().catch((e) => console.error("boot failed:", e));
+boot().catch((e) => {
+  console.error("boot failed:", e);
+  showBootError(e);
+});

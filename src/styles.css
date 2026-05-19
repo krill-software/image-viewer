@@ -1,6 +1,17 @@
 /* image-viewer — app-specific styles. Palette + chrome + body grid
  * + menu + status line + kbd come from @krill-software/desktop-ui. */
 
+::selection {
+  background: var(--fm-selection);
+  text-shadow: none;
+}
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "calt" 1, "liga" 1;
+}
+
 /* Viewport ============================================================== */
 
 #viewport {

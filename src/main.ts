@@ -318,6 +318,7 @@ function initChrome() {
       "last":        () => goTo(view.paths.length - 1),
     },
     showStatusLine: true,
+    updater: true,
   });
   titleEl = chrome.title;
   viewportEl = chrome.viewport;

@@ -1,0 +1,8 @@
+remote_theme: krill-software/docs-theme@v2
+plugins:
+  - jekyll-remote-theme
+
+title: Image Viewer
+slug: image-viewer
+brand: image-viewer
+version: 0.2.0

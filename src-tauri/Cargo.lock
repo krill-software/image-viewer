@@ -1815,7 +1815,7 @@ dependencies = [
 
 [[package]]
 name = "krill-image-viewer"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "krill-desktop-core",
  "serde",
